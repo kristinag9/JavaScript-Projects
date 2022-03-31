@@ -17,10 +17,10 @@ class Timer {
 
    start = () => {
       if(this.onStart) {
-         this.onStart();
+         this.onStart(this.timeRemaining);
       }
       this.tick();
-      this.interval = setInterval(this.tick, 1000); // tick will be run every 1 sec; wait 1 sec until tick is invoked for the first time
+      this.interval = setInterval(this.tick, 50); // tick will be run every 1 sec; wait 1 sec until tick is invoked for the first time
       // console.log(timer); // returns 1
    };
 
@@ -44,9 +44,9 @@ class Timer {
          }
       } else {
          // calling the getter and the setter for the time
-         this.timeRemaining = this.timeRemaining - 1;
+         this.timeRemaining = this.timeRemaining - 0.05;
          if(this.onTick) {
-            this.onTick();
+            this.onTick(this.timeRemaining);
          }
       }
    };
@@ -59,6 +59,6 @@ class Timer {
 
    // setter for the time using the 'set' keyword
    set timeRemaining(time) {
-      this.durationInput.value = time;
+      this.durationInput.value = time.toFixed(2);
    };
 }
