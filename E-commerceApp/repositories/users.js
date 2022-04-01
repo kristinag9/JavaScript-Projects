@@ -3,7 +3,9 @@
 // Active record approach - every record is an instance of a 'model' class that has methods to save, update, delete this record
 const fs = require('fs');
 const crypto = require('crypto');
+const util = require('util');
 
+const scrypt = util.promisify(crypto.scrypt);
 class UsersRepository {
    constructor(filename) {
       if(!filename) {
@@ -28,12 +30,31 @@ class UsersRepository {
 
    async create(attrs) {
       attrs.id = this.randomID();
+
+      const salt = crypto.randomBytes(8).toString('hex');
+      const buf = await scrypt(attrs.password, salt, 64);
+
       const records = await this.getAll();
-      records.push(attrs);
+      const record = {
+         ...attrs,
+         password: `${buf.toString('hex')}.${salt}`
+       };
+      records.push(record);
 
       // write the updated 'records' array back to this.filename
       await this.writeAll(records);
+
+      return record;
    }
+
+   async comparePasswords(saved, supplied) {
+      // Saved -> password saved in our database. 'hashed.salt'
+      // Supplied -> password given to us by a user trying sign in
+      const [hashed, salt] = saved.split('.');
+      const hashedSupplied = await scrypt(supplied, salt, 64);
+
+      return hashed === hashedSupplied;
+    }
 
    async writeAll(records) {
       await fs.promises.writeFile(this.filename, JSON.stringify(records, null, 2)); // null is custom formatter
@@ -87,25 +108,6 @@ class UsersRepository {
    }
 }
 
-const test = async () => {
-   const repo = new UsersRepository('users.json');
-   // repo.create({ email: 'test@test.com', password: 'password' });
-   // const users = await repo.getAll();
-   // const user = await repo.getOne('02cf00e0');
-   // console.log(user);
-   // await repo.delete('02cf00e0');
-
-   // await repo.update('14f0910b', { password: 'pass' });
-
-   const user = await repo.getOneBy({
-      email: 'test@test.com',
-      password: 'password'
-   });
-   console.log(user);
-}
-
-test();
-
 // exporting the class
 // module.exports = UsersRepository;
 // in another file ...
@@ -114,4 +116,3 @@ test();
 
 // exporting an instance
 module.exports = new UsersRepository('users.json');
-// const repo = require('./users');
